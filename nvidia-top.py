@@ -41,7 +41,7 @@ def display_info(root, scr):
 
 # ---Main Section---
 
-width = 88
+width = 94
 
 data = sp.check_output(['nvidia-smi', '-q', '-x'])
 root = ET.fromstring(data)
