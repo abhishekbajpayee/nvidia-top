@@ -13,9 +13,8 @@ def display_info(root, scr):
         name = gpu.find('product_name').text
         
         # Memory Use
-        try:
-            mem = gpu.find('memory_usage')
-        except AttributeError:
+        mem = gpu.find('memory_usage')
+        if (mem == None):
             mem = gpu.find('fb_memory_usage')
 
         memu = mem.find('used').text
