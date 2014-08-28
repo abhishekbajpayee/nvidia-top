@@ -1,8 +1,6 @@
 import subprocess as sp
 import xml.etree.ElementTree as ET
 import time
-import os
-import sys
 import curses as crs
 
 def display_info(root, scr):
@@ -15,7 +13,11 @@ def display_info(root, scr):
         name = gpu.find('product_name').text
         
         # Memory Use
-        mem = gpu.find('memory_usage')
+        try:
+            mem = gpu.find('memory_usage')
+        except AttributeError:
+            mem = gpu.find('fb_memory_usage')
+
         memu = mem.find('used').text
         nmemu = memu.split()
         memt = mem.find('total').text
