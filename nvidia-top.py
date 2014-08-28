@@ -34,7 +34,7 @@ def display_info(root, scr):
         temp = gpu.find('temperature')
         temp = temp.find('gpu_temp').text
         
-        line = '%3d' % gpunum + '%25s' % name + '%20s' % memuse + '%15.2f' % usage + '%15s' % powuse + '%10s' % temp
+        line = '%3d' % gpunum + '%25s' % name + '%20s' % memuse + '%15.2f' % usage + '%20s' % powuse + '%10s' % temp
         scr.addstr(gpunum+8, 0, line)
 
         gpunum = gpunum+1
@@ -60,7 +60,7 @@ scr.addstr(3, 0, 'Number of GPUs:\t' + repr(n))
 
 # Drawing header
 scr.addstr(5, 0, '-' * width)
-scr.addstr(6, 0, '%3s' % '#' + '%25s' % 'Name' + '%20s' % 'Mem. Use' + '%15s' % '% Mem. Use' + '%15s' % 'Pow. Use' + '%10s' % 'Temp.')
+scr.addstr(6, 0, '%3s' % '#' + '%25s' % 'Name' + '%20s' % 'Mem. Use' + '%15s' % '% Mem. Use' + '%20s' % 'Pow. Use' + '%10s' % 'Temp.')
 scr.addstr(7, 0, '-' * width)
 
 # 10 tenths = 1 sec <- this is the polling frequency
