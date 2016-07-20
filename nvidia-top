@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import time
 import curses as crs
 
-def display_info(root, scr):
+def display_gpu_info(root, scr, start_line):
 
     gpunum = 0
 
@@ -14,6 +14,12 @@ def display_info(root, scr):
         # Name
         name = gpu.find('product_name').text
         
+        # Display Usage
+        display_active = gpu.find('display_active').text
+        display = False
+        if display_active == 'Enabled':
+            display = True
+
         # Memory Use
         mem = gpu.find('memory_usage')
         if (mem == None):
@@ -36,58 +42,111 @@ def display_info(root, scr):
         temp = gpu.find('temperature')
         temp = temp.find('gpu_temp').text
         
-        line = '%3d' % gpunum + '%25s' % name + '%20s' % memuse + '%15.2f' % usage + '%20s' % powuse + '%10s' % temp
-        scr.addstr(gpunum+8, 0, line)
+        line = '%3d' % (gpunum+1)
+        if display:
+            line = line + '%24s*' % name
+        else:
+            line = line + '%25s' % name
+        line = line + '%20s' % memuse + '%15.2f' % usage + '%20s' % powuse + '%10s' % temp
+
+        scr.addstr(gpunum + start_line, 0, line)
 
         gpunum = gpunum+1
 
+def count_procs(root):
+
+    nproc = 0
+
+    for gpu in root.findall('gpu'):
+
+        procs = gpu.findall('processes')
+        nproc = nproc + len(procs)
+
+    return nproc
+
+def display_proc_info(root, scr, start_line):
+
+    gpunum = 0
+    pnum = 0
+
+    for gpu in root.findall('gpu'):
+        
+        procs = gpu.find('processes')
+
+        for proc in procs.findall('process_info'):
+
+            pid = proc.find('pid').text
+            name = proc.find('process_name').text
+            memuse = proc.find('used_memory').text
+            
+            line = '%3s' % repr(pnum) + '%8s' % repr(gpunum) + '%8s' % pid + '%60s' % name + '%14s' % memuse
+            scr.addstr(pnum + start_line, 0, line)
+            pnum = pnum + 1
+
+        gpunum = gpunum + 1
+
 # ---Main Section---
+if __name__ == '__main__':
 
-scr = crs.initscr()
-scr.keypad(1)
-
-try:
-
-    width = 94
-
-    data = sp.check_output(['nvidia-smi', '-q', '-x'])
-    root = ET.fromstring(data)
+    scr = crs.initscr()
+    scr.keypad(1)
     
-    timestamp = root.find('timestamp').text
-    driver = root.find('driver_version').text
-    n = int(root.find('attached_gpus').text)
-    
-    scr.addstr(0, 0, 'nvidia-top' + '%*s' % (width-10, 'ESC to quit'))
-    scr.addstr(1, 0, 'Timestamp:\t' + timestamp)
-    scr.addstr(2, 0, 'Driver Version:\t' + driver)
-    scr.addstr(3, 0, 'Number of GPUs:\t' + repr(n))
-    
-    # Drawing header
-    scr.addstr(5, 0, '-' * width)
-    scr.addstr(6, 0, '%3s' % '#' + '%25s' % 'Name' + '%20s' % 'Mem. Use' + '%15s' % '% Mem. Use' + '%20s' % 'Pow. Use' + '%10s' % 'Temp.')
-    scr.addstr(7, 0, '-' * width)
-    
-    # 10 tenths = 1 sec <- this is the polling frequency
-    crs.halfdelay(10)
-
-    while (1):
-    
+    try:
+        
+        width = 94
+        
         data = sp.check_output(['nvidia-smi', '-q', '-x'])
         root = ET.fromstring(data)
-        
+
         timestamp = root.find('timestamp').text
+        driver = root.find('driver_version').text
+        ngpu = int(root.find('attached_gpus').text)
+        nproc = count_procs(root)
+
+        scr.addstr(0, 0, 'nvidia-top' + '%*s' % (width-10, 'ESC to quit'))
         scr.addstr(1, 0, 'Timestamp:\t' + timestamp)
+        scr.addstr(2, 0, 'Driver Version:\t' + driver)
+        scr.addstr(3, 0, 'Number of GPUs:\t' + repr(ngpu))
+    
+        # Drawing GPU Header
+        gpu_startline = 5
+        scr.addstr(gpu_startline, 0, '-' * width)
+        scr.addstr(gpu_startline + 1, 0, '%3s' % '#' + '%25s' % 'Name' + '%20s' % 'Mem. Use' + '%15s' % '% Mem. Use' + '%20s' % 'Pow. Use' + '%10s' % 'Temp.')
+        scr.addstr(gpu_startline + 2, 0, '-' * width)
+        gpu_endline = gpu_startline + 3
         
-        display_info(root, scr)
+        # Drawing Proc Header
+        proc_startline = gpu_endline + ngpu + 1
+        scr.addstr(proc_startline, 0, '-' * width)
+        scr.addstr(proc_startline + 1, 0, '%3s' % '#' + '%8s' % 'GPU' + '%8s' % 'PID' + '%60s' % '% Process Name' + '%14s' % 'Mem. Use')
+        scr.addstr(proc_startline + 2, 0, '-' * width)
+        proc_endline = proc_startline + 3
+
+        footer_startline = proc_endline + nproc + 1
+        scr.addstr(footer_startline, 0, '* GPU Driving Display')
+
+        # 10 tenths = 1 sec <- this is the polling frequency
+        crs.halfdelay(10)
         
-        scr.refresh()
-        
-        key = scr.getch()
-        if (key == 27):
-            break
+        while (1):
+            
+            data = sp.check_output(['nvidia-smi', '-q', '-x'])
+            root = ET.fromstring(data)
+            
+            timestamp = root.find('timestamp').text
+            scr.addstr(1, 0, 'Timestamp:\t' + timestamp)
+            
+            display_gpu_info(root, scr, gpu_endline)
+            display_proc_info(root, scr, proc_endline)
 
-except:
-
-    print 'Something went wrong! Exception handling is pretty basic right now.'
-
-crs.endwin()
+            scr.refresh()
+            
+            key = scr.getch()
+            if (key == 27):
+                break
+                
+    except:
+                
+        print 'Something went wrong! Exception handling is pretty basic right now.'
+                
+    crs.endwin()
