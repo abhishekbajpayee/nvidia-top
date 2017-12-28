@@ -5,9 +5,12 @@ import xml.etree.ElementTree as ET
 import time
 import curses as crs
 
+pnum_last = 0
+
 def display_gpu_info(root, scr, start_line):
 
     gpunum = 0
+    display = False
 
     for gpu in root.findall('gpu'):
         
@@ -16,7 +19,6 @@ def display_gpu_info(root, scr, start_line):
         
         # Display Usage
         display_active = gpu.find('display_active').text
-        display = False
         if display_active == 'Enabled':
             display = True
 
@@ -53,6 +55,11 @@ def display_gpu_info(root, scr, start_line):
 
         gpunum = gpunum+1
 
+    if display:
+        scr.addstr(gpunum + start_line, 0, '*GPU Driving System Display')
+    else:
+        scr.addstr(gpunum + start_line, 0, 'No GPUs Driving System Display')
+
 def count_procs(root):
 
     nproc = 0
@@ -79,11 +86,20 @@ def display_proc_info(root, scr, start_line):
             name = proc.find('process_name').text
             memuse = proc.find('used_memory').text
             
-            line = '%3s' % repr(pnum) + '%8s' % repr(gpunum) + '%8s' % pid + '%60s' % name + '%14s' % memuse
+            line = '%3s' % repr(pnum) + '%8s' % repr(gpunum+1) + '%8s' % pid + '%60s' % name + '%14s' % memuse
             scr.addstr(pnum + start_line, 0, line)
             pnum = pnum + 1
 
         gpunum = gpunum + 1
+
+    global pnum_last
+    pnum_change = pnum - pnum_last
+    pnum_last = pnum
+    if (pnum_change < 0):
+        # adding blank lines to clear old processes
+        for i in range(0,-1*pnum_change):
+            scr.addstr(pnum + start_line, 0, ' ' * 94)
+            pnum = pnum + 1
 
 # ---Main Section---
 if __name__ == '__main__':
@@ -111,19 +127,18 @@ if __name__ == '__main__':
         # Drawing GPU Header
         gpu_startline = 5
         scr.addstr(gpu_startline, 0, '-' * width)
-        scr.addstr(gpu_startline + 1, 0, '%3s' % '#' + '%25s' % 'Name' + '%20s' % 'Mem. Use' + '%15s' % '% Mem. Use' + '%20s' % 'Pow. Use' + '%10s' % 'Temp.')
+        scr.addstr(gpu_startline + 1, 0, '%3s' % '#' + '%25s' % 'Name' + '%20s' % 'Mem. Use' + '%15s' % 'Mem. Use' + '%20s' % 'Pow. Use' + '%10s' % 'Temp.')
         scr.addstr(gpu_startline + 2, 0, '-' * width)
         gpu_endline = gpu_startline + 3
         
         # Drawing Proc Header
-        proc_startline = gpu_endline + ngpu + 1
+        proc_startline = gpu_endline + ngpu + 2
         scr.addstr(proc_startline, 0, '-' * width)
-        scr.addstr(proc_startline + 1, 0, '%3s' % '#' + '%8s' % 'GPU' + '%8s' % 'PID' + '%60s' % '% Process Name' + '%14s' % 'Mem. Use')
+        scr.addstr(proc_startline + 1, 0, '%3s' % '#' + '%8s' % 'GPU' + '%8s' % 'PID' + '%60s' % 'Process Name' + '%14s' % 'Mem. Use')
         scr.addstr(proc_startline + 2, 0, '-' * width)
         proc_endline = proc_startline + 3
 
-        footer_startline = proc_endline + nproc + 1
-        scr.addstr(footer_startline, 0, '* GPU Driving Display')
+        footer_startline = proc_endline + nproc + 10
 
         # 10 tenths = 1 sec <- this is the polling frequency
         crs.halfdelay(10)
