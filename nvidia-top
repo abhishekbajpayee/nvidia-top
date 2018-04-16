@@ -84,6 +84,8 @@ def display_proc_info(root, scr, start_line):
 
             pid = proc.find('pid').text
             name = proc.find('process_name').text
+            if len(name) > 50:
+                name = name[0:50] + '...'
             memuse = proc.find('used_memory').text
             
             line = '%3s' % repr(pnum) + '%8s' % repr(gpunum+1) + '%8s' % pid + '%60s' % name + '%14s' % memuse
