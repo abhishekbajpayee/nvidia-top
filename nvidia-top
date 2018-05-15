@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     scr = crs.initscr()
     scr.keypad(1)
-    
+
     try:
         
         width = 94
